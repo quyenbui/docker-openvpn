@@ -28,7 +28,7 @@ cd "$APP_PERSIST_DIR"
 
 LOCKFILE=.gen
 
-# Regenerate certs only on the first start 
+# Regenerate certs only on the first start
 if [ ! -f $LOCKFILE ]; then
 
     /usr/share/easy-rsa/easyrsa build-ca nopass << EOF
@@ -74,4 +74,23 @@ echo " "
 # Generate client config
 ./genclient.sh $@
 
-tail -f /dev/null
+#RUN tor
+IPTABLES=$(which iptables)  # /sbin/iptables
+OVPN=$(ip r | grep "tun" | awk '{print $3}')  # tun0
+VPN_IP=$(ip r | grep "tun" | awk '{print $9}')  # 10.8.0.1
+
+# Config IPtables to route all traffic trough Tor proxy
+# transparent Tor proxy
+$IPTABLES -A INPUT -i $OVPN -s 10.8.0.0/24 -m state --state NEW -j ACCEPT
+$IPTABLES -t nat -A PREROUTING -i $OVPN -p udp --dport 53 -s 10.8.0.0/24 -j DNAT --to-destination $VPN_IP:53530
+$IPTABLES -t nat -A PREROUTING -i $OVPN -p tcp -s 10.8.0.0/24 -j DNAT --to-destination $VPN_IP:9040
+$IPTABLES -t nat -A PREROUTING -i $OVPN -p udp -s 10.8.0.0/24 -j DNAT --to-destination $VPN_IP:9040
+
+## Transproxy leak blocked:
+# https://trac.torproject.org/projects/tor/wiki/doc/TransparentProxy#WARNING
+$IPTABLES -A OUTPUT -m conntrack --ctstate INVALID -j DROP
+$IPTABLES -A OUTPUT -m state --state INVALID -j DROP
+$IPTABLES -A OUTPUT ! -o lo ! -d 127.0.0.1 ! -s 127.0.0.1 -p tcp -m tcp --tcp-flags ACK,FIN ACK,FIN -j DROP
+$IPTABLES -A OUTPUT ! -o lo ! -d 127.0.0.1 ! -s 127.0.0.1 -p tcp -m tcp --tcp-flags ACK,RST ACK,RST -j DROP
+
+tor

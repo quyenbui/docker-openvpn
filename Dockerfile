@@ -24,6 +24,10 @@ RUN apk add --no-cache openvpn easy-rsa bash netcat-openbsd zip dumb-init && \
     cd ${APP_INSTALL_PATH} && \
     cp config/server.conf /etc/openvpn/server.conf
 
+RUN apk add tor
+RUN cp /etc/tor/torrc.sample /etc/tor/torrc
+RUN chown root:root /var/lib/tor
+RUN printf "VirtualAddrNetwork 10.192.0.0/10\nAutomapHostsOnResolve 1\nDNSPort 10.8.0.1:53530\nTransPort 10.8.0.1:9040" >> /etc/tor/torrc
 
 EXPOSE 1194/udp
 EXPOSE 8080/tcp
