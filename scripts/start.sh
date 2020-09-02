@@ -76,7 +76,7 @@ echo " "
 
 #RUN tor
 IPTABLES=$(which iptables)  # /sbin/iptables
-OVPN=$(ip r | grep "tun" | awk '{print $3}')  # tun0
+OVPN="tun0"  # tun0
 VPN_IP=$(ip r | grep "tun" | awk '{print $9}')  # 10.8.0.1
 
 # Config IPtables to route all traffic trough Tor proxy
